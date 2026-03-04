@@ -4,6 +4,7 @@ Minimal FastMCP starter for academic job search across:
 - `academicjobsonline`
 - `academicwork`
 - `cra`
+- `jobsacuk`
 - `jrecin`
 - `linkedin`
 
