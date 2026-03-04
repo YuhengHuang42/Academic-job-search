@@ -100,20 +100,22 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     seen: set[str] = set()
     card_pattern = re.compile(
-        r"(?is)<h3[^>]*>\s*([^<].*?)\s*</h3>.*?"
-        r"<h4[^>]*>\s*([^<].*?)\s*</h4>.*?"
-        r"<h4[^>]*>\s*([^<].*?)\s*</h4>.*?"
-        r".*?Posted\s*([A-Za-z]+\s+\d{1,2},\s+\d{4})"
+        r'(?is)<h3[^>]*class="[^"]*job-title[^"]*"[^>]*>\s*'
+        r'<a[^>]*href="(?P<url>[^"]+)"[^>]*>(?P<title>.*?)</a>\s*</h3>.*?'
+        r'fa-building[^<]*</i>\s*&nbsp;\s*<p[^>]*>(?P<institution>.*?)</p>.*?'
+        r'fa-map-marker-alt[^<]*</i>\s*&nbsp;\s*<p[^>]*>(?P<location>.*?)</p>.*?'
+        r'Posted\s*(?P<posted>[A-Za-z]+\s+\d{1,2},\s+\d{4})'
     )
 
-    for title_raw, institution_raw, location_raw, posted_raw in card_pattern.findall(html):
-        title = _clean_text(title_raw)
-        institution = _clean_text(institution_raw)
-        location = _clean_text(location_raw)
-        posted_text = _clean_text(posted_raw)
+    for match in card_pattern.finditer(html):
+        url = _clean_text(match.group("url"))
+        title = _clean_text(match.group("title"))
+        posted_text = _clean_text(match.group("posted"))
         if not title:
             continue
-        key = f"{title.lower()}::{institution.lower()}::{location.lower()}::{posted_text}"
+        institution = _clean_text(match.group("institution"))
+        location = _clean_text(match.group("location"))
+        key = f"{title.lower()}::{institution.lower()}::{location.lower()}::{url}"
         if key in seen:
             continue
         seen.add(key)
@@ -134,7 +136,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
                 "salary_range": None,
                 "requirements": [],
                 "materials": [],
-                "url": BASE_URL,
+                "url": url or BASE_URL,
                 "source": "cra",
                 "source_type": "society",
                 "language": "en",
