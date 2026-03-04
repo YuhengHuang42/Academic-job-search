@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "academic-jobs": {
+      "command": "python3",
+      "args": [
+        "/Users/yuhenghuang/work/PAgent/openclawhome/.openclaw/workspace/skills/academic-job-search/scripts/server.py"
+      ]
+    }
+  },
+  "imports": []
+}
