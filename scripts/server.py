@@ -5,11 +5,11 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from connectors import academicjobsonline, academicwork, jrecin, linkedin
+from connectors import academicjobsonline, academicwork, cra, jrecin, linkedin
 # mcporter --config skills/academic-job-search/scripts/config/mcporter.json list academic-jobs --schema
 mcp = FastMCP("academic-job-search")
 
-VALID_SOURCES = {"academicjobsonline", "academicwork", "jrecin", "linkedin"}
+VALID_SOURCES = {"academicjobsonline", "academicwork", "cra", "jrecin", "linkedin"}
 CANONICAL_RANKS = {
     "professor-lecture",
     "postdoc-researcher",
@@ -199,7 +199,7 @@ def search_academic_jobs(
     if max_results < 1 or max_results > 200:
         return _error("INVALID_ARGUMENT", "max_results must be between 1 and 200")
 
-    requested_sources = sources or ["academicjobsonline", "academicwork", "jrecin", "linkedin"]
+    requested_sources = sources or ["academicjobsonline", "academicwork", "cra", "jrecin", "linkedin"]
     invalid = [s for s in requested_sources if s not in VALID_SOURCES]
     if invalid:
         return _error("INVALID_ARGUMENT", f"unsupported sources: {invalid}")
@@ -220,6 +220,7 @@ def search_academic_jobs(
     source_impl = {
         "academicjobsonline": academicjobsonline.search,
         "academicwork": academicwork.search,
+        "cra": cra.search,
         "jrecin": jrecin.search,
         "linkedin": linkedin.search,
     }
@@ -305,6 +306,13 @@ def get_supported_academic_sources() -> dict[str, Any]:
                 "regions": ["japan", "global"],
                 "languages": ["ja", "en"],
                 "notes": "Japan-focused research and higher-ed listings with rich rank taxonomy.",
+            },
+            {
+                "name": "cra",
+                "category": "society",
+                "regions": ["global"],
+                "languages": ["en"],
+                "notes": "CRA career center with computing research and faculty postings.",
             },
             {
                 "name": "linkedin",

@@ -27,6 +27,7 @@ Then call MCP tools:
 Use these as default sources unless user asks otherwise:
 - `academicjobsonline` for global faculty/postdoc listings and deadlines
 - `academicwork` for Canadian higher-ed listings (CAUT board)
+- `cra` for computing research/faculty opportunities from the CRA career center
 - `jrecin` for Japan-focused academic and research roles
 - `linkedin` for broader academic, research, and institute postings
 
@@ -56,7 +57,7 @@ search_academic_jobs \
   --field "computer-science/ml" \
   --rank "postdoc-researcher" \
   --location "usa" \
-  --sources "academicjobsonline,academicwork,jrecin,linkedin" \
+  --sources "academicjobsonline,academicwork,cra,jrecin,linkedin" \
   --visa-needed true \
   --max-results 20
 ```
@@ -110,7 +111,7 @@ Return results in this structure:
 ## Safe defaults
 
 - Start with `max-results` 15.
-- Default sources: `academicjobsonline`, `academicwork`, `jrecin`, `linkedin`.
+- Default sources: `academicjobsonline`, `academicwork`, `cra`, `jrecin`, `linkedin`.
 - `search_term` is a soft preference for scoring, not a hard filter.
 - Do not over-constrain keyword matching; keep recall high and let downstream reasoning shortlist.
 - If `location` is Japan, prioritize `jrecin`; otherwise prioritize `academicjobsonline` + `linkedin`.

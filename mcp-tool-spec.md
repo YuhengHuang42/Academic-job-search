@@ -9,6 +9,7 @@ Search across configured academic job sources and return normalized results.
 Default sources for v1:
 - `academicjobsonline`
 - `academicwork`
+- `cra`
 - `jrecin`
 - `linkedin`
 
@@ -25,7 +26,7 @@ Default sources for v1:
   "visa_needed": "boolean (optional)",
   "deadline_before": "string (optional, YYYY-MM-DD)",
   "posted_within_days": "number (optional)",
-  "sources": "string[] (optional; values: academicjobsonline|academicwork|jrecin|linkedin)",
+  "sources": "string[] (optional; values: academicjobsonline|academicwork|cra|jrecin|linkedin)",
   "language_hint": "string (optional; auto|en|ja, default auto)",
   "max_results": "number (optional, default 15, max 200)",
   "offset": "number (optional, default 0)",
@@ -94,6 +95,7 @@ Return `fit_reasons` to make ranking explainable.
 
 - `academicjobsonline`: treat as high-signal official-board feed with strong deadline signal.
 - `academicwork`: treat as official-board source with strong Canadian higher-ed coverage.
+- `cra`: treat as a society-operated board with strong computing-research relevance.
 - `jrecin`: support Japanese taxonomy and JP/EN mixed text; map domestic rank labels to canonical rank values.
 - `linkedin`: treat as aggregator by default; boost only when official institution posting is verified.
 
