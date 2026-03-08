@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from html import unescape
 from typing import Any
+from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 BASE_URL = "https://www.academicwork.ca/"
@@ -20,6 +21,20 @@ def _fetch_text(url: str) -> str:
     )
     with urlopen(req, timeout=20) as resp:  # noqa: S310
         return resp.read().decode("utf-8", errors="replace")
+
+
+def _fetch_text_with_final_url(url: str) -> tuple[str, str]:
+    req = Request(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (compatible; academic-job-search-mcp/0.1)",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
+    )
+    with urlopen(req, timeout=20) as resp:  # noqa: S310
+        final_url = resp.geturl()
+        html = resp.read().decode("utf-8", errors="replace")
+    return final_url, html
 
 
 def _clean_text(html_fragment: str | None) -> str:
@@ -61,6 +76,34 @@ def _field_tags(query: dict[str, Any], text: str) -> list[str]:
     return sorted(set(tags)) or ["academic"]
 
 
+def _looks_like_invalid_detail_page(url: str, final_url: str, html: str) -> bool:
+    # Some stale job slugs resolve to the generic home template.
+    if final_url.rstrip("/") == BASE_URL.rstrip("/"):
+        return True
+    html_l = html.lower()
+    if "404" in html_l and "not found" in html_l:
+        return True
+
+    title_match = re.search(r"(?is)<title[^>]*>(.*?)</title>", html)
+    h1_match = re.search(r"(?is)<h1[^>]*>(.*?)</h1>", html)
+    page_title = _clean_text(title_match.group(1) if title_match else "")
+    page_h1 = _clean_text(h1_match.group(1) if h1_match else "")
+    if page_title == "CAUT | Academic Work" and page_h1.lower() == "home":
+        return True
+
+    # If we cannot find any expected job-detail cues, treat as invalid.
+    detail_hints = (
+        "job-title",
+        "job-institution",
+        "date-posted-value",
+        "job-short-description",
+        "apply",
+    )
+    if not any(hint in html_l for hint in detail_hints):
+        return True
+    return False
+
+
 def search(query: dict[str, Any]) -> list[dict[str, Any]]:
     """Fetch and parse public academic listings from academicwork.ca."""
     results: list[dict[str, Any]] = []
@@ -70,6 +113,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
     institution_pattern = re.compile(r'(?is)<a[^>]+class="job-institution"[^>]*>(.*?)</a>')
     posted_pattern = re.compile(r'(?is)<strong[^>]+class="date-posted-value"[^>]*>(.*?)</strong>')
     summary_pattern = re.compile(r'(?is)<p[^>]+class="job-short-description"[^>]*>(.*?)</p>')
+    detail_validation_cache: dict[str, bool] = {}
 
     for page in range(1, MAX_PAGES + 1):
         page_url = BASE_URL if page == 1 else f"{BASE_URL}?page={page}"
@@ -82,7 +126,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
             url_match = url_pattern.search(article)
             if not url_match:
                 continue
-            url = url_match.group(1).strip()
+            url = urljoin(BASE_URL, url_match.group(1).strip())
             title = _clean_text(url_match.group(2))
             if not title:
                 continue
@@ -95,6 +139,18 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
             key = f"{title.lower()}::{institution.lower()}::{url}"
             if key in seen:
                 continue
+
+            is_valid = detail_validation_cache.get(url)
+            if is_valid is None:
+                try:
+                    final_url, detail_html = _fetch_text_with_final_url(url)
+                    is_valid = not _looks_like_invalid_detail_page(url, final_url, detail_html)
+                except Exception:
+                    is_valid = False
+                detail_validation_cache[url] = is_valid
+            if not is_valid:
+                continue
+
             seen.add(key)
             combined = f"{title} {summary}"
             results.append(
