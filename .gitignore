@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+
+# Local academic search profiles can include personal preferences.
+profiles/*.local.json

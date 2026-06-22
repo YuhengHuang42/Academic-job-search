@@ -1,6 +1,11 @@
-# Academic Job Search MCP (Starter)
+# Academic Job Search MCP
 
-Minimal FastMCP starter for academic job search across:
+FastMCP server for academic job search across multiple public and configured sources.
+
+## Sources
+
+The current source connectors are:
+
 - `academicjobsonline`
 - `academicwork`
 - `cra`
@@ -8,10 +13,14 @@ Minimal FastMCP starter for academic job search across:
 - `jrecin`
 - `linkedin`
 
-This starter is intentionally simple:
+AcademicJobsOnline, AcademicWork, CRA, jobs.ac.uk, and JREC-IN fetch public listing pages. The LinkedIn connector is a compliant placeholder and returns no rows until an approved provider, API, or export workflow is configured.
+
+Additional source candidates and implementation notes are tracked in `docs/source-candidates.md`.
+
+## Project Status
+
+This project is intentionally simple:
 - Tools are implemented and runnable.
-- AcademicJobsOnline and JREC-IN connectors fetch public listing pages.
-- LinkedIn connector is a compliant placeholder (returns no rows until provider/API is configured).
 - Normalization, deduplication, and fit scoring are included.
 - Rank is normalized to two buckets: `professor-lecture` and `postdoc-researcher`.
 - `search_term` is treated as a soft relevance signal to keep recall high.
@@ -34,6 +43,10 @@ pip install "mcp>=1.1.0"
 ```bash
 python3 {baseDir}/scripts/server.py
 ```
+
+## Contributing
+
+Pull requests of any kind are welcome: new sources, parser fixes, docs, tests, cleanup, better scoring, compliance notes, and small usability improvements all help.
 
 ## Next steps
 

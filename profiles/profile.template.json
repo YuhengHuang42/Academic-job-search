@@ -1,0 +1,45 @@
+{
+  "profile_name": "template",
+  "description": "Copy this to profiles/<name>.local.json and customize it for a specific academic job search.",
+  "fields": [
+    "computer-science"
+  ],
+  "subfields": [],
+  "rank_buckets": [
+    "professor-lecture",
+    "postdoc-researcher"
+  ],
+  "title_keywords": [],
+  "search_terms": [],
+  "broad_discovery_terms": [
+    "computer science"
+  ],
+  "discovery_strategy": {
+    "enabled": true,
+    "cadence": "on-request",
+    "purpose": "Offer this as an optional high-recall audit. When the user asks for a broad discovery pass, search with broad terms, compare returned titles/institutions against focused search results, and add recurring useful vocabulary to the profile.",
+    "review_top_results": 50,
+    "learn_missing_terms": true,
+    "broad_result_review_rules": [
+      "Keep broad-pass roles when the title, department, field tags, or institution context clearly match the profile.",
+      "Treat broad postdoc/researcher results from general science boards as false positives when they only match the rank bucket and have no field signal.",
+      "When multiple broad-pass results share useful wording, add that wording to search_terms or subfields before the next focused search."
+    ]
+  },
+  "locations": [],
+  "countries": [],
+  "visa_needed": null,
+  "remote_preference": "any",
+  "deadline_before": null,
+  "posted_within_days": null,
+  "sources": [
+    "academicjobsonline",
+    "academicwork",
+    "cra",
+    "jobsacuk",
+    "jrecin",
+    "linkedin"
+  ],
+  "max_results": 20,
+  "notes": []
+}

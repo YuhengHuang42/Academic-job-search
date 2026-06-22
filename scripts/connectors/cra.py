@@ -4,6 +4,7 @@ import re
 from datetime import datetime
 from html import unescape
 from typing import Any
+from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 BASE_URL = "https://careercenter.cra.org"
@@ -39,6 +40,10 @@ def _clean_text(html_fragment: str | None) -> str:
     if not html_fragment:
         return ""
     return re.sub(r"\s+", " ", unescape(re.sub(r"(?is)<[^>]+>", " ", html_fragment))).strip()
+
+
+def _abs_url(url: str | None) -> str:
+    return urljoin(BASE_URL, url or "")
 
 
 def _posted_to_iso(posted: str | None) -> str | None:
@@ -99,22 +104,37 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
 
     results: list[dict[str, Any]] = []
     seen: set[str] = set()
-    card_pattern = re.compile(
-        r'(?is)<h3[^>]*class="[^"]*job-title[^"]*"[^>]*>\s*'
-        r'<a[^>]*href="(?P<url>[^"]+)"[^>]*>(?P<title>.*?)</a>\s*</h3>.*?'
-        r'fa-building[^<]*</i>\s*&nbsp;\s*<p[^>]*>(?P<institution>.*?)</p>.*?'
-        r'fa-map-marker-alt[^<]*</i>\s*&nbsp;\s*<p[^>]*>(?P<location>.*?)</p>.*?'
-        r'Posted\s*(?P<posted>[A-Za-z]+\s+\d{1,2},\s+\d{4})'
-    )
 
-    for match in card_pattern.finditer(html):
-        url = _clean_text(match.group("url"))
-        title = _clean_text(match.group("title"))
-        posted_text = _clean_text(match.group("posted"))
+    # CRA's WebScribble template changes icon class names occasionally
+    # (for example fa-map-marker-alt -> fa-location-dot). Split around job
+    # titles and then extract nearby fields so icon churn does not zero results.
+    chunks = re.split(r'(?is)(?=<h3[^>]*class="[^"]*job-title[^"]*"[^>]*>)', html)
+    for chunk in chunks:
+        title_match = re.search(
+            r'(?is)<h3[^>]*class="[^"]*job-title[^"]*"[^>]*>\s*'
+            r'<a[^>]*href="(?P<url>[^"]+)"[^>]*>(?P<title>.*?)</a>\s*</h3>',
+            chunk,
+        )
+        if not title_match:
+            continue
+        url = _clean_text(title_match.group("url"))
+        title = _clean_text(title_match.group("title"))
         if not title:
             continue
-        institution = _clean_text(match.group("institution"))
-        location = _clean_text(match.group("location"))
+
+        institution_match = re.search(
+            r'(?is)fa-building[^<]*</i>\s*&nbsp;\s*<p[^>]*>(?P<institution>.*?)</p>',
+            chunk,
+        )
+        location_match = re.search(
+            r'(?is)fa-(?:map-marker-alt|location-dot)[^<]*</i>\s*&nbsp;\s*<p[^>]*>(?P<location>.*?)</p>',
+            chunk,
+        )
+        posted_match = re.search(r"(?is)Posted\s*(?P<posted>[A-Za-z]+\s+\d{1,2},\s+\d{4})", chunk)
+
+        institution = _clean_text(institution_match.group("institution") if institution_match else "")
+        location = _clean_text(location_match.group("location") if location_match else "")
+        posted_text = _clean_text(posted_match.group("posted") if posted_match else "")
         key = f"{title.lower()}::{institution.lower()}::{location.lower()}::{url}"
         if key in seen:
             continue
@@ -136,7 +156,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
                 "salary_range": None,
                 "requirements": [],
                 "materials": [],
-                "url": url or BASE_URL,
+                "url": _abs_url(url),
                 "source": "cra",
                 "source_type": "society",
                 "language": "en",

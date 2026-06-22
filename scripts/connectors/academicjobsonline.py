@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 from urllib.request import Request, urlopen
 
 BASE_URL = "https://academicjobsonline.org/ajo"
-MORE_POSTINGS_URL = f"{BASE_URL}?joblist-------40-d"
+MORE_POSTINGS_URL = f"{BASE_URL}?joblst-------40-d"
 
 
 def _fetch_text(url: str) -> str:
@@ -53,6 +53,8 @@ def _rank_from_title(title: str) -> str | None:
         return "professor-lecture"
     if "professor" in t:
         return "professor-lecture"
+    if "faculty position" in t or "faculty positions" in t:
+        return "professor-lecture"
     if "lecturer" in t:
         return "professor-lecture"
     return None
@@ -69,22 +71,31 @@ def _deadline_to_iso(deadline_ymd: str | None) -> str | None:
 
 def _field_tags(query: dict[str, Any], title: str) -> list[str]:
     tags: list[str] = []
-    field = (query.get("field") or "").strip()
-    if field:
-        tags.extend([x for x in field.split("/") if x])
     title_l = title.lower()
     # Keep broad aliases to improve filtering in upstream matcher.
-    if re.search(r"\b(cs|computer science|informatics|software)\b", title_l):
+    if re.search(r"\b(cs|computer science|informatics|software|computing)\b", title_l):
         tags.append("computer-science")
     if "machine learning" in title_l or re.search(r"\bml\b", title_l):
         tags.append("machine-learning")
     if re.search(r"\bai\b", title_l) or "artificial intelligence" in title_l:
         tags.append("ai")
+    if "data science" in title_l:
+        tags.append("data-science")
+        tags.append("computer-science")
+    if "systems" in title_l and "engineering" not in title_l:
+        tags.append("computer-science")
     if "physics" in title_l:
         tags.append("physics")
     if "chemistry" in title_l:
         tags.append("chemistry")
     return sorted(set(tags)) or ["academic"]
+
+
+def _matches_requested_field(query: dict[str, Any], tags: list[str]) -> bool:
+    field = (query.get("field") or "").lower()
+    if "computer-science" not in field:
+        return True
+    return "computer-science" in tags
 
 
 def search(query: dict[str, Any]) -> list[dict[str, Any]]:
@@ -96,6 +107,9 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
         key = (institution.lower(), title.lower(), deadline)
         if key in seen:
             return
+        field_tags = _field_tags(query, title)
+        if not _matches_requested_field(query, field_tags):
+            return
         seen.add(key)
         results.append(
             {
@@ -105,7 +119,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
                 "location": None,
                 "country": None,
                 "rank": _rank_from_title(title),
-                "field_tags": _field_tags(query, title),
+                "field_tags": field_tags,
                 "employment_type": None,
                 "posted_date": None,
                 "deadline": deadline,
@@ -120,6 +134,30 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
 
+    def add_records_from_institution_item(item: str) -> None:
+        institution_match = re.search(r"(?is)<b>(.*?)</b>", item)
+        institution = _clean_text(institution_match.group(1) if institution_match else "Unknown Institution")
+        posting_pattern = re.compile(
+            r'(?is)\[<a[^>]+href="(?P<jobhref>[^"]+)"[^>]*id="k(?P<id>\d+)"[^>]*>.*?</a>\]\s*'
+            r'<span[^>]+id="j\d+"[^>]*>(?P<title>.*?)</span>'
+            r'(?P<tail>.*?)(?=\[<a[^>]+href="[^"]+"[^>]*id="k\d+"|</li>|$)'
+        )
+        for posting in posting_pattern.finditer(item):
+            title = _clean_text(posting.group("title"))
+            if not title:
+                continue
+            tail = posting.group("tail")
+            deadline_match = re.search(r"(?i)deadline\s*</span>\s*(\d{4}/\d{2}/\d{2})", tail)
+            if not deadline_match:
+                deadline_match = re.search(r"(?i)deadline\s*(\d{4}/\d{2}/\d{2})", tail)
+            deadline = _deadline_to_iso(deadline_match.group(1) if deadline_match else None)
+            apply_match = re.search(r'(?is)<a[^>]+href="([^"]*(?:apply-|/apply)[^"]*)"', tail)
+            if apply_match:
+                url = _abs_url(unescape(apply_match.group(1)))
+            else:
+                url = _abs_url(unescape(posting.group("jobhref")))
+            add_record(title=title, institution=institution, deadline=deadline, url=url)
+
     # Parse homepage "Upcoming Deadlines" block.
     try:
         html = _fetch_text(BASE_URL)
@@ -131,17 +169,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
         section = section_match.group(1) if section_match else ""
         items = re.findall(r"(?is)<li[^>]*>(.*?)</li>", section)
         for item in items:
-            institution_match = re.search(r"(?is)<b>(.*?)</b>", item)
-            institution = _clean_text(institution_match.group(1) if institution_match else "Unknown Institution")
-            title_match = re.search(r'(?is)<span[^>]+id="j\d+"[^>]*>(.*?)</span>', item)
-            title = _clean_text(title_match.group(1) if title_match else item)
-            if not title:
-                continue
-            deadline_match = re.search(r"(?i)deadline\s*</span>\s*(\d{4}/\d{2}/\d{2})", item)
-            deadline = _deadline_to_iso(deadline_match.group(1) if deadline_match else None)
-            href_match = re.search(r'(?is)<a[^>]+href="([^"]*(?:apply-|joblist)[^"]*)"', item)
-            url = _abs_url(unescape(href_match.group(1))) if href_match else BASE_URL
-            add_record(title=title, institution=institution, deadline=deadline, url=url)
+            add_records_from_institution_item(item)
 
     # Parse the full list page behind "more postings...".
     try:
