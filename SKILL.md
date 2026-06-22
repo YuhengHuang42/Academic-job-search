@@ -1,56 +1,69 @@
 ---
 name: academic-job-search
-description: Search and shortlist academic jobs with high-recall filtering and two rank buckets (`professor-lecture`, `postdoc-researcher`) across sources. Use when the user asks for academic jobs, postdocs, tenure-track roles, faculty search, or research positions.
+description: Search, diagnose, and shortlist academic jobs with high-recall filtering across faculty, lecturer, postdoc, researcher, and research-scientist roles. Use when the user asks for academic jobs, postdocs, tenure-track roles, faculty searches, lecturer searches, or university/institute research positions.
 homepage: https://github.com/chinpeerapat/jobspy-mcp-server
 metadata: {"clawdbot":{"emoji":"🎓","requires":{"bins":["python3"],"env":[]}}}
 ---
 
 # Academic Job Search
 
-Use this skill to run focused searches for academic roles and return a shortlist with fit reasons.
+Use this skill to run focused academic job searches, preserve recall, explain fit, and surface gaps that need human verification.
 
-## Quick start
+## Available Tools
 
-Run local MCP starter server:
+Run the local MCP server when needed:
 
 ```bash
 python3 {baseDir}/scripts/server.py
 ```
 
-Then call MCP tools:
+Primary MCP tools:
+
 - `search_academic_jobs`
 - `get_supported_academic_sources`
 - `get_academic_search_tips`
 
-## Primary sources
+## Default Sources
 
-Use these as default sources unless user asks otherwise:
-- `academicjobsonline` for global faculty/postdoc listings and deadlines
-- `academicwork` for Canadian higher-ed listings (CAUT board)
-- `cra` for computing research/faculty opportunities from the CRA career center
-- `jobsacuk` for UK and international higher-ed opportunities from jobs.ac.uk
-- `jrecin` for Japan-focused academic and research roles
-- `linkedin` for broader academic, research, and institute postings
+Use all configured sources unless the user asks for a narrower scope:
 
-## When to use
+- `academicjobsonline`: global faculty/postdoc board with strong deadline signal.
+- `academicwork`: Canadian higher-ed listings from AcademicWork/CAUT.
+- `cra`: computing research and faculty opportunities from the CRA Career Center.
+- `jobsacuk`: UK-centric academic board with many international higher-ed roles.
+- `jrecin`: Japan-focused academic and research roles, including JP/EN mixed listings.
+- `linkedin`: discovery source only until a compliant provider/API/export workflow is configured; prefer official institution URLs when found.
 
-Use this workflow when user requests:
-- Academic jobs
-- Postdoc positions
-- Faculty or tenure-track search
-- Lecturer or research scientist roles
-- University or institute hiring
+Additional source candidates and watchlists live in `docs/source-candidates.md`.
+
+## Operating Principles
+
+- Keep recall high on the first pass. Treat `search_term` as a ranking signal, not a hard filter.
+- Treat rank as a hard filter only when the user explicitly gives one of the canonical buckets.
+- Prefer official institution or official-board postings over reposts and aggregators.
+- Never infer visa sponsorship, salary, or deadline from context. If missing, mark it `unknown` or `verify`.
+- Deduplicate before ranking, normally by normalized institution, title, location, deadline, and URL when available.
+- Explain ranking with short fit reasons tied to field, rank, location, deadline, or source reliability.
+- Respect each source's terms, robots rules, and request pacing before enabling live fetches.
+
+## Canonical Buckets
+
+Use these rank buckets in queries and explanations:
+
+- `professor-lecture`: assistant/associate/full professor, lecturer, senior lecturer, teaching professor, faculty position.
+- `postdoc-researcher`: postdoc, research fellow, research associate, research scientist, staff scientist, institute researcher.
+
+For JREC-IN, map Japanese rank labels such as `教授相当`, `准教授相当`, `助教相当`, and `研究員・ポスドク相当` into the closest canonical bucket while keeping the original title.
 
 ## Workflow
 
-1. Clarify hard constraints first:
-   - Field/subfield (for example: "CS > ML", "Biology > Genomics")
-   - Target rank (`professor-lecture` or `postdoc-researcher`)
-   - Location and remote preference
-   - Visa sponsorship requirement
-   - Deadline window
+1. Identify hard constraints:
+   - field/subfield, such as `computer-science/ml`
+   - rank bucket, if the user cares
+   - country/region, remote preference, and visa needs
+   - deadline window or urgency
 
-2. Run a small first pass search (10-20 results) via MCP tool:
+2. Run a small high-recall first pass:
 
 ```bash
 search_academic_jobs \
@@ -63,25 +76,31 @@ search_academic_jobs \
   --max-results 20
 ```
 
-3. Evaluate results and explain ranking:
-   - Query relevance
-   - Rank/field alignment
-   - Deadline urgency
-   - Hard-constraint match
+3. Inspect the returned meta and warnings:
+   - If a source returns zero rows, mention it as a diagnostic rather than treating it as proof that no jobs exist.
+   - If `linkedin` returns zero rows, say that it needs a compliant provider/API/export workflow.
+   - If live network access failed, rerun with approved network access before interpreting the result set.
+   - If one source dominates the volume, still check whether smaller high-signal sources surfaced good matches.
 
-4. Refine with one or two targeted changes:
-   - Broaden or narrow field taxonomy
-   - Add/remove sources
-   - Adjust deadline window or geography
+4. Shortlist and refine:
+   - Promote listings with explicit field and rank alignment.
+   - Downrank broad science results that only match a rank bucket but lack field signal.
+   - Use one or two follow-up queries to cover missing vocabulary or regions.
+   - For broad CS discovery, include variants such as `computing`, `computing science`, `data science`, `cybersecurity`, `cyber security`, `software engineering`, `distributed systems`, `HPC`, and `computer systems`.
 
-5. Return final shortlist with:
-   - Why each role fits
-   - Missing critical information
-   - Next query suggestions
+5. Return a concise shortlist plus gaps and next steps.
 
-## Output format
+## Regional And Source Guidance
 
-Return results in this structure:
+- Japan: prioritize `jrecin`; preserve Japanese titles; support Japanese and English text.
+- UK/Ireland: use `jobsacuk` heavily, then verify official institution pages for top matches.
+- Canada: include `academicwork` for higher-ed coverage.
+- Computing/CS: include `cra`, `academicjobsonline`, `jobsacuk`, and any relevant institutional watchlist.
+- Institutional misses are source-coverage failures, not keyword failures. If a known department or university matters, search or add its official jobs page.
+
+## Output Format
+
+Use this shape unless the user asks for something else:
 
 ```markdown
 ## Top Matches
@@ -91,34 +110,22 @@ Return results in this structure:
   - Visa: <supported/unknown/not listed>
   - Link: <url>
 
-## Gaps to verify
+## Gaps To Verify
 - <missing detail 1>
 - <missing detail 2>
 
-## Next search iteration
+## Source Diagnostics
+- <source behavior, warnings, or notable omissions>
+
+## Next Search Iteration
 - <query tweak 1>
 - <query tweak 2>
 ```
 
-## Source quality rules
+## Safe Defaults
 
-- Prefer official institution postings over reposts.
-- De-duplicate by normalized `(institution, title, location, deadline)`.
-- If deadline is missing, flag as "verify".
-- If visa info is missing, do not assume sponsorship.
-- For `jrecin`, support JP/EN text and keep original Japanese title when available.
-- For `linkedin`, mark role as "aggregator" unless an official institution URL is present.
-
-## Safe defaults
-
-- Start with `max-results` 15.
+- Start with `max_results` 15-20.
 - Default sources: `academicjobsonline`, `academicwork`, `cra`, `jobsacuk`, `jrecin`, `linkedin`.
-- `search_term` is a soft preference for scoring, not a hard filter.
-- Do not over-constrain keyword matching; keep recall high and let downstream reasoning shortlist.
-- If `location` is Japan, prioritize `jrecin`; otherwise prioritize `academicjobsonline` + `linkedin`.
-
-## Notes
-
-- Be transparent about uncertainty (deadline/visa/salary often missing).
-- Prioritize deadlines and fit over raw volume.
-- If user has no constraints, ask for field + rank bucket + region before searching.
+- If the user has no constraints, ask for field, rank bucket, and region before running a broad search.
+- Prioritize deadline urgency and genuine fit over raw volume.
+- Be transparent when detail pages still need manual verification.
