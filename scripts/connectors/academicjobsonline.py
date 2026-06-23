@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 
 BASE_URL = "https://academicjobsonline.org/ajo"
 MORE_POSTINGS_URL = f"{BASE_URL}?joblst-------40-d"
+CS_CATEGORY_URL = f"{BASE_URL}/cs?"
 
 
 def _fetch_text(url: str) -> str:
@@ -53,7 +54,13 @@ def _rank_from_title(title: str) -> str | None:
         return "professor-lecture"
     if "professor" in t:
         return "professor-lecture"
+    if "tenure-track" in t or "tenure track" in t or "tenured or tenure-track" in t:
+        return "professor-lecture"
+    if "teaching-stream" in t or "teaching stream" in t or "teaching track" in t:
+        return "professor-lecture"
     if "faculty position" in t or "faculty positions" in t:
+        return "professor-lecture"
+    if "faculty opening" in t or "faculty openings" in t:
         return "professor-lecture"
     if "lecturer" in t:
         return "professor-lecture"
@@ -82,6 +89,9 @@ def _field_tags(query: dict[str, Any], title: str) -> list[str]:
     if "data science" in title_l:
         tags.append("data-science")
         tags.append("computer-science")
+    if "cybersecurity" in title_l or "cyber security" in title_l or "computer security" in title_l:
+        tags.append("cybersecurity")
+        tags.append("computer-science")
     if "systems" in title_l and "engineering" not in title_l:
         tags.append("computer-science")
     if "physics" in title_l:
@@ -107,7 +117,7 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
         key = (institution.lower(), title.lower(), deadline)
         if key in seen:
             return
-        field_tags = _field_tags(query, title)
+        field_tags = _field_tags(query, f"{title} {institution}")
         if not _matches_requested_field(query, field_tags):
             return
         seen.add(key)
@@ -158,6 +168,37 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
                 url = _abs_url(unescape(posting.group("jobhref")))
             add_record(title=title, institution=institution, deadline=deadline, url=url)
 
+    def add_records_from_category_block(block: str) -> None:
+        heading_match = re.search(r'(?is)<h3[^>]*class="[^"]*\bx1\b[^"]*"[^>]*>(.*?)</h3>', block)
+        heading = heading_match.group(1) if heading_match else ""
+        heading_links = re.findall(r"(?is)<a[^>]*>(.*?)</a>", heading)
+        institution = _clean_text(heading_links[0] if heading_links else heading)
+        department = _clean_text(heading_links[1] if len(heading_links) > 1 else "")
+
+        for item in re.findall(r"(?is)<li[^>]*>(.*?)</li>", block):
+            posting_match = re.search(
+                r'(?is)<a[^>]+href="(?P<jobhref>/ajo/jobs/\d+)"[^>]*id="k(?P<id>\d+)"[^>]*>.*?</a>\]\s*'
+                r'<span[^>]+id="j\d+"[^>]*>(?P<title>.*?)</span>(?P<tail>.*)',
+                item,
+            )
+            if not posting_match:
+                continue
+            title = _clean_text(posting_match.group("title"))
+            if not title:
+                continue
+            tail = posting_match.group("tail")
+            deadline_match = re.search(r"(?i)deadline\s*(\d{4}/\d{2}/\d{2})", tail)
+            deadline = _deadline_to_iso(deadline_match.group(1) if deadline_match else None)
+            apply_match = re.search(r'(?is)<a[^>]+href="([^"]+)"[^>]*>\s*Apply\b', tail)
+            if apply_match:
+                url = _abs_url(unescape(apply_match.group(1)))
+            else:
+                url = _abs_url(unescape(posting_match.group("jobhref")))
+            display_institution = institution
+            if department:
+                display_institution = f"{institution}, {department}" if institution else department
+            add_record(title=title, institution=display_institution, deadline=deadline, url=url)
+
     # Parse homepage "Upcoming Deadlines" block.
     try:
         html = _fetch_text(BASE_URL)
@@ -197,5 +238,20 @@ def search(query: dict[str, Any]) -> list[dict[str, Any]]:
             else:
                 url = _abs_url(f"/ajo/jobs/{match.group('id')}")
             add_record(title=title, institution="Unknown Institution", deadline=deadline, url=url)
+
+    # Parse the Computer Science category page. This exposes many CS postings that are
+    # absent from the homepage deadline block and the stale full-list URL.
+    try:
+        cs_html = _fetch_text(CS_CATEGORY_URL)
+    except Exception:
+        cs_html = ""
+
+    if cs_html:
+        category_blocks = re.findall(
+            r'(?is)<div[^>]+class="[^"]*\bclr\b[^"]*"[^>]*>.*?<ol[^>]+class="[^"]*\bldt\b[^"]*"[^>]*>.*?</ol>\s*</div>',
+            cs_html,
+        )
+        for block in category_blocks:
+            add_records_from_category_block(block)
 
     return results
