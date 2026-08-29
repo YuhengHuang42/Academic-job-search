@@ -2,6 +2,10 @@
 
 This note records additional sources worth considering for the academic job search MCP.
 
+## Recently Implemented
+
+- `polytechnicpositions`: Global specialist board for engineering and technology faculty, postdoc, and researcher roles. Added from the [PolytechnicPositions overview](https://polytechnicpositions.com/about-polytechnicpositions,d18.html); use it for high-recall CS, software, electrical/electronic, and broader engineering searches.
+
 ## Highest-Priority Additions
 
 - `linkedin`: Priority discovery source. The current repo lists LinkedIn but its connector returns no rows; it needs an approved API, export workflow, or compliant provider. Use LinkedIn leads to discover postings, then prefer official institution/application URLs for canonical records.

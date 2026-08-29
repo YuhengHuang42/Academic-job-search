@@ -13,6 +13,7 @@ Default sources for v1:
 - `jobsacuk`
 - `jrecin`
 - `linkedin`
+- `polytechnicpositions`
 
 ### Input schema
 
@@ -27,7 +28,7 @@ Default sources for v1:
   "visa_needed": "boolean (optional)",
   "deadline_before": "string (optional, YYYY-MM-DD)",
   "posted_within_days": "number (optional)",
-  "sources": "string[] (optional; values: academicjobsonline|academicwork|cra|jobsacuk|jrecin|linkedin)",
+  "sources": "string[] (optional; values: academicjobsonline|academicwork|cra|jobsacuk|jrecin|linkedin|polytechnicpositions)",
   "language_hint": "string (optional; auto|en|ja, default auto)",
   "max_results": "number (optional, default 15, max 200)",
   "offset": "number (optional, default 0)",
@@ -100,6 +101,7 @@ Return `fit_reasons` to make ranking explainable.
 - `jobsacuk`: treat as a high-coverage UK-centric academic board with international listings.
 - `jrecin`: support Japanese taxonomy and JP/EN mixed text; map domestic rank labels to canonical rank values.
 - `linkedin`: treat as aggregator by default; boost only when official institution posting is verified.
+- `polytechnicpositions`: treat as a global specialist board for engineering and technology faculty/research roles.
 
 Regional fallback:
 - If `location` or `country` implies Japan, apply a mild source prior for `jrecin`.
@@ -116,7 +118,7 @@ Returns available sources and notes on reliability/rate limits.
   "sources": [
     {
       "name": "string",
-      "category": "official-board|aggregator|society|institution",
+      "category": "official-board|specialist-board|aggregator|society|institution",
       "regions": ["string"],
       "languages": ["string"],
       "notes": "string"

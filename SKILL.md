@@ -33,6 +33,7 @@ Use all configured sources unless the user asks for a narrower scope:
 - `jobsacuk`: UK-centric academic board with many international higher-ed roles.
 - `jrecin`: Japan-focused academic and research roles, including JP/EN mixed listings.
 - `linkedin`: discovery source only until a compliant provider/API/export workflow is configured; prefer official institution URLs when found.
+- `polytechnicpositions`: global specialist board for engineering and technology faculty, postdoc, and researcher roles.
 
 Additional source candidates and watchlists live in `docs/source-candidates.md`.
 
@@ -71,7 +72,7 @@ search_academic_jobs \
   --field "computer-science/ml" \
   --rank "postdoc-researcher" \
   --location "usa" \
-  --sources "academicjobsonline,academicwork,cra,jobsacuk,jrecin,linkedin" \
+  --sources "academicjobsonline,academicwork,cra,jobsacuk,jrecin,linkedin,polytechnicpositions" \
   --visa-needed true \
   --max-results 20
 ```
@@ -95,7 +96,7 @@ search_academic_jobs \
 - Japan: prioritize `jrecin`; preserve Japanese titles; support Japanese and English text.
 - UK/Ireland: use `jobsacuk` heavily, then verify official institution pages for top matches.
 - Canada: include `academicwork` for higher-ed coverage.
-- Computing/CS: include `cra`, `academicjobsonline`, `jobsacuk`, and any relevant institutional watchlist.
+- Computing/CS: include `cra`, `academicjobsonline`, `jobsacuk`, `polytechnicpositions`, and any relevant institutional watchlist.
 - Institutional misses are source-coverage failures, not keyword failures. If a known department or university matters, search or add its official jobs page.
 
 ## Output Format
@@ -125,7 +126,7 @@ Use this shape unless the user asks for something else:
 ## Safe Defaults
 
 - Start with `max_results` 15-20.
-- Default sources: `academicjobsonline`, `academicwork`, `cra`, `jobsacuk`, `jrecin`, `linkedin`.
+- Default sources: `academicjobsonline`, `academicwork`, `cra`, `jobsacuk`, `jrecin`, `linkedin`, `polytechnicpositions`.
 - If the user has no constraints, ask for field, rank bucket, and region before running a broad search.
 - Prioritize deadline urgency and genuine fit over raw volume.
 - Be transparent when detail pages still need manual verification.

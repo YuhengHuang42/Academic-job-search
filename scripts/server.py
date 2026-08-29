@@ -5,11 +5,27 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from connectors import academicjobsonline, academicwork, cra, jobsacuk, jrecin, linkedin
+from connectors import (
+    academicjobsonline,
+    academicwork,
+    cra,
+    jobsacuk,
+    jrecin,
+    linkedin,
+    polytechnicpositions,
+)
 # mcporter --config skills/academic-job-search/scripts/config/mcporter.json list academic-jobs --schema
 mcp = FastMCP("academic-job-search")
 
-VALID_SOURCES = {"academicjobsonline", "academicwork", "cra", "jobsacuk", "jrecin", "linkedin"}
+VALID_SOURCES = {
+    "academicjobsonline",
+    "academicwork",
+    "cra",
+    "jobsacuk",
+    "jrecin",
+    "linkedin",
+    "polytechnicpositions",
+}
 CANONICAL_RANKS = {
     "professor-lecture",
     "postdoc-researcher",
@@ -199,7 +215,15 @@ def search_academic_jobs(
     if max_results < 1 or max_results > 200:
         return _error("INVALID_ARGUMENT", "max_results must be between 1 and 200")
 
-    requested_sources = sources or ["academicjobsonline", "academicwork", "cra", "jobsacuk", "jrecin", "linkedin"]
+    requested_sources = sources or [
+        "academicjobsonline",
+        "academicwork",
+        "cra",
+        "jobsacuk",
+        "jrecin",
+        "linkedin",
+        "polytechnicpositions",
+    ]
     invalid = [s for s in requested_sources if s not in VALID_SOURCES]
     if invalid:
         return _error("INVALID_ARGUMENT", f"unsupported sources: {invalid}")
@@ -224,6 +248,7 @@ def search_academic_jobs(
         "jobsacuk": jobsacuk.search,
         "jrecin": jrecin.search,
         "linkedin": linkedin.search,
+        "polytechnicpositions": polytechnicpositions.search,
     }
 
     warnings: list[str] = []
@@ -321,6 +346,13 @@ def get_supported_academic_sources() -> dict[str, Any]:
                 "regions": ["uk", "international"],
                 "languages": ["en"],
                 "notes": "Large UK-focused academic job board with broad higher-ed coverage.",
+            },
+            {
+                "name": "polytechnicpositions",
+                "category": "specialist-board",
+                "regions": ["global"],
+                "languages": ["en"],
+                "notes": "Global engineering and technology faculty, postdoc, and researcher listings.",
             },
             {
                 "name": "linkedin",

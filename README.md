@@ -12,8 +12,9 @@ The current source connectors are:
 - `jobsacuk`
 - `jrecin`
 - `linkedin`
+- `polytechnicpositions`
 
-AcademicJobsOnline, AcademicWork, CRA, jobs.ac.uk, and JREC-IN fetch public listing pages. The LinkedIn connector is a compliant placeholder and returns no rows until an approved provider, API, or export workflow is configured.
+AcademicJobsOnline, AcademicWork, CRA, jobs.ac.uk, JREC-IN, and PolytechnicPositions fetch public listing pages. PolytechnicPositions adds global engineering and technology faculty/research coverage. The LinkedIn connector is a compliant placeholder and returns no rows until an approved provider, API, or export workflow is configured.
 
 Additional source candidates and implementation notes are tracked in `docs/source-candidates.md`.
 
